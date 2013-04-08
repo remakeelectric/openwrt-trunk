@@ -70,3 +70,14 @@
 +}
 +
 +module_init(ar231x_init_reset);
+--- a/arch/mips/ar231x/ar2315.c
++++ b/arch/mips/ar231x/ar2315.c
+@@ -705,8 +705,6 @@ ar2315_plat_setup(void)
+ 	if (!is_2315())
+ 		return;
+ 
+-	gpio_request(AR2315_RESET_GPIO, "reset");
+-
+ 	/* Clear any lingering AHB errors */
+ 	config = read_c0_config();
+ 	write_c0_config(config & ~0x3);
