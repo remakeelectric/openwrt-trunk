@@ -232,6 +232,7 @@ platform_check_image() {
 	bullet-m | \
 	loco-m-xw | \
 	nanostation-m | \
+	rme-eg200 | \
 	rocket-m | \
 	rocket-m-xw | \
 	rocket-m-ti | \
