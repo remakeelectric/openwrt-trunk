@@ -499,6 +499,9 @@ ar71xx_board_detect() {
 	*EL-MINI)
 		name="el-mini"
 		;;
+	*"eTactica EG-200")
+		name="rme-eg200"
+		;;
 	*"GL-CONNECT INET v1")
 		name="gl-inet"
 		gl_inet_board_detect
