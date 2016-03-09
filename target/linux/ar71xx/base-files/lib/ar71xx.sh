@@ -37,8 +37,9 @@ wndr3700_board_detect() {
 		machine="NETGEAR WNDR3700"
 		;;
 	"33373031")
-		# Use awk to remove everything after the first zero byte
-		model="$(ar71xx_get_mtd_offset_size_format art 41 32 %c | LC_CTYPE=C awk -v 'FS=[^[:print:]]' '{print $1; exit}')"
+		model="$(ar71xx_get_mtd_offset_size_format art 41 32 %c)"
+		# Use awk to remove everything unprintable
+		model_stripped="$(ar71xx_get_mtd_offset_size_format art 41 32 %c | LC_CTYPE=C awk -v 'FS=[^[:print:]]' '{print $1; exit}')"
 		case $model in
 		$'\xff'*)
 			if [ "${model:24:1}" = 'N' ]; then
@@ -48,14 +49,14 @@ wndr3700_board_detect() {
 			fi
 			;;
 		'29763654+16+64'*)
-			machine="NETGEAR ${model:14}"
+			machine="NETGEAR ${model_stripped:14}"
 			;;
 		'29763654+16+128'*)
-			machine="NETGEAR ${model:15}"
+			machine="NETGEAR ${model_stripped:15}"
 			;;
 		*)
 			# Unknown ID
-			machine="NETGEAR $model"
+			machine="NETGEAR ${model_stripped}"
 		esac
 	esac
 
@@ -107,11 +108,14 @@ tplink_board_detect() {
 	"015300"*)
 		model="EasyLink EL-MINI"
 		;;
-	"04440001"*)
-		model="BITMAIN ANTMINER S1"
+	"044401"*)
+		model="ANTMINER-S1"
 		;;
-	"04440003"*)
-		model="BITMAIN ANTMINER S3"
+	"044403"*)
+		model="ANTMINER-S3"
+		;;
+	"44440101"*)
+		model="ANTROUTER-R1"
 		;;
 	"120000"*)
 		model="MERCURY MAC1200R"
@@ -119,7 +123,10 @@ tplink_board_detect() {
 	"3C0001"*)
 		model="OOLITE"
 		;;
-	"070300"*)
+	"3C0002"*)
+		model="MINIBOX_V1"
+		;;
+	"070301"*)
 		model="TP-Link TL-WR703N"
 		;;
 	"071000"*)
@@ -350,10 +357,19 @@ ar71xx_board_detect() {
 	*ALL0315N)
 		name="all0315n"
 		;;
+	*Antminer-S1)
+		name="antminer-s1"
+		;;
+	*Antminer-S3)
+		name="antminer-s3"
+		;;
+	*"Arduino Yun")
+		name="arduino-yun"
+		;;
 	*AP113)
 		name="ap113"
 		;;
-	*AP121)
+	*"AP121 reference board")
 		name="ap121"
 		;;
 	*AP121-MINI)
@@ -398,6 +414,12 @@ ar71xx_board_detect() {
 	*AW-NR580)
 		name="aw-nr580"
 		;;
+	*CAP324)
+		name="cap324"
+		;;
+	*C-55)
+		name="c-55"
+		;;
 	*CAP4200AG)
 		name="cap4200ag"
 		;;
@@ -407,6 +429,12 @@ ar71xx_board_detect() {
 	*"CPE210/220/510/520")
 		name="cpe510"
 		tplink_pharos_board_detect
+		;;
+	*CR3000)
+		name="cr3000"
+		;;
+	*CR5000)
+		name="cr5000"
 		;;
 	*"DB120 reference board")
 		name="db120"
@@ -441,14 +469,23 @@ ar71xx_board_detect() {
 	*"DIR-835 rev. A1")
 		name="dir-835-a1"
 		;;
+	*"dLAN Hotspot")
+		name="dlan-hotspot"
+		;;
 	*"dLAN pro 500 Wireless+")
 		name="dlan-pro-500-wp"
 		;;
 	*"dLAN pro 1200+ WiFi ac")
 		name="dlan-pro-1200-ac"
 		;;
+	*DR344)
+		name="dr344"
+		;;
 	*"Dragino v2")
 		name="dragino2"
+		;;
+	*"Domino Pi")
+		name="gl-domino"
 		;;
 	*"EAP300 v2")
 		name="eap300v2"
@@ -465,6 +502,12 @@ ar71xx_board_detect() {
 	*"GL-CONNECT INET v1")
 		name="gl-inet"
 		gl_inet_board_detect
+		;;
+	*"GL AR150")
+		name="gl-ar150"
+		;;
+	*"GL AR300")
+		name="gl-ar300"
 		;;
 	*"EnGenius EPG5000")
 		name="epg5000"
@@ -514,11 +557,17 @@ ar71xx_board_detect() {
 	*"MAC1200R")
 		name="mc-mac1200r"
 		;;
+	*"MiniBox V1.0")
+		name="minibox-v1"
+		;;
 	*MR12)
 		name="mr12"
 		;;
 	*MR16)
 		name="mr16"
+		;;
+	*MR18)
+		name="mr18"
 		;;
 	*MR600v2)
 		name="mr600v2"
@@ -552,6 +601,9 @@ ar71xx_board_detect() {
 		;;
 	*"NBG460N/550N/550NH")
 		name="nbg460n_550n_550nh"
+		;;
+	*"Zyxel NBG6616")
+		name="nbg6616"
 		;;
 	*"Zyxel NBG6716")
 		name="nbg6716"
@@ -709,6 +761,9 @@ ar71xx_board_detect() {
 	*TEW-732BR)
 		name="tew-732br"
 		;;
+	*TEW-823DRU)
+		name="tew-823dru"
+		;;
 	*"TL-WR1041N v2")
 		name="tl-wr1041n-v2"
 		;;
@@ -769,6 +824,9 @@ ar71xx_board_detect() {
 	*"TL-WA801ND v2")
 		name="tl-wa801nd-v2"
 		;;
+	*"TL-WA801ND v3")
+		name="tl-wa801nd-v3"
+		;;
 	*TL-WA901ND)
 		name="tl-wa901nd"
 		;;
@@ -820,6 +878,9 @@ ar71xx_board_detect() {
 	*"TL-WR941N/ND v5")
 		name="tl-wr941nd-v5"
 		;;
+	*"TL-WR941N/ND v6")
+		name="tl-wr941nd-v6"
+		;;
 	*"TL-WR703N v1")
 		name="tl-wr703n"
 		;;
@@ -847,10 +908,13 @@ ar71xx_board_detect() {
 	*UniFi)
 		name="unifi"
 		;;
+	*"UniFi-AC")
+		name="unifiac"
+		;;
 	*"UniFi AP Pro")
 		name="uap-pro"
 		;;
-	*"WeIO")
+	"WeIO"*)
 		name="weio"
 		;;
 	*WHR-G301N)
@@ -915,6 +979,9 @@ ar71xx_board_detect() {
 		;;
 	*"WNR1000 V2")
 		name="wnr1000-v2"
+		;;
+	*WPN824N)
+		name="wpn824n"
 		;;
 	*WRT160NL)
 		name="wrt160nl"

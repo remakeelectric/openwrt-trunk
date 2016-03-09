@@ -34,7 +34,9 @@ get_status_led() {
 	a5-v11|\
 	d105|\
 	dcs-930l-b1|\
+	ex2700|\
 	hlk-rm04|\
+	jhr-n825r|\
 	mpr-a1|\
 	mpr-a2)
 		status_led="$board:red:power"
@@ -62,7 +64,8 @@ get_status_led() {
 	rut5xx|\
 	v11st-fe|\
 	vocore|\
-	wmr-300)
+	wmr-300|\
+	zbt-wg2626)
 		status_led="$board:green:status"
 		;;
 	atp-52b|\
@@ -73,7 +76,8 @@ get_status_led() {
 	dir-645)
 		status_led="$board:green:wps"
 		;;
-	cf-wr800n)
+	cf-wr800n|\
+	psg1208)
 		status_led="$board:white:wps"
 		;;
 	cy-swr1100|\
@@ -82,6 +86,7 @@ get_status_led() {
 		;;
 	dap-1350|\
 	na930|\
+	pbr-m1|\
 	rt-n13u|\
 	rt-n14u|\
 	rt-n15|\
@@ -104,6 +109,17 @@ get_status_led() {
 	f7c027)
 		status_led="$board:orange:status"
 		;;
+	hc5*61|\
+	jhr-n805r|\
+	jhr-n926r|\
+	mlw221|\
+	mlwg2)
+		status_led="$board:blue:system"
+		;;
+	linkits7688| \
+	linkits7688d)
+		[ "$1" = "upgrade" ] && status_led="mediatek:orange:wifi"
+		;;
 	m2m)
 		status_led="$board:blue:wifi"
 		;;
@@ -115,10 +131,6 @@ get_status_led() {
 	zte-q7)
 		status_led="$board:red:status"
 		;;
-	mlw221|\
-	mlwg2)
-		status_led="$board:blue:system"
-		;;
 	mr-102n)
 		status_led="$board:amber:status"
 		;;
@@ -128,11 +140,6 @@ get_status_led() {
 	oy-0001|\
 	sl-r7205)
 		status_led="$board:green:wifi"
-		;;
-	pbr-m1|\
-	w306r-v20|\
-	zbt-wr8305rt)
-		status_led="$board:green:sys"
 		;;
 	psr-680w)
 		status_led="$board:red:wan"
@@ -149,6 +156,7 @@ get_status_led() {
 	tew-692gr|\
 	ur-326n4g|\
 	ur-336un|\
+	wf-2881|\
 	wr512-3gn)
 		status_led="$board:green:wps"
 		;;
@@ -157,6 +165,11 @@ get_status_led() {
 		;;
 	v22rw-2x2)
 		status_led="$board:green:security"
+		;;
+	w306r-v20|\
+	witi|\
+	zbt-wr8305rt)
+		status_led="$board:green:sys"
 		;;
 	wcr-150gn|\
 	wl-351)
@@ -173,11 +186,16 @@ get_status_led() {
 	wsr-600)
 		status_led="$board:orange:diag"
 		;;
+	wrtnode2r | \
+	wrtnode2p | \
+	wrtnode)
+		status_led="wrtnode:blue:indicator"
+		;;
 	esac
 }
 
 set_state() {
-	get_status_led
+	get_status_led $1
 
 	case "$1" in
 	preinit)
@@ -186,6 +204,7 @@ set_state() {
 	failsafe)
 		status_led_blink_failsafe
 		;;
+	upgrade | \
 	preinit_regular)
 		status_led_blink_preinit_regular
 		;;

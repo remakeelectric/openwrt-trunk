@@ -37,7 +37,6 @@ endef
 
 CONFIGURE_ARGS += \
 	--disable-rpath \
-	--enable-new-mount	\
 	--disable-tls		\
 	--disable-sulogin	\
 	--without-python	\
@@ -136,6 +135,18 @@ endef
 define Package/agetty/description
  agetty opens a tty port, prompts for a login name and invokes the
  /bin/login command
+endef
+
+define Package/blkdiscard
+$(call Package/util-linux/Default)
+  TITLE:=discard sectors on a device
+  SUBMENU=disc
+endef
+
+define Package/blkdiscard/description
+ The blkdiscard is used to discard device sectors. This is useful for
+ solid-state drivers (SSDs) and thinly-provisioned storage. Unlike fstrim,
+ this command is used directly on the block device.
 endef
 
 define Package/blkid
@@ -463,6 +474,11 @@ define Package/agetty/install
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/agetty $(1)/usr/sbin/
 endef
 
+define Package/blkdiscard/install
+	$(INSTALL_DIR) $(1)/usr/sbin
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/blkdiscard $(1)/usr/sbin/
+endef
+
 define Package/blkid/install
 	$(INSTALL_DIR) $(1)/usr/sbin
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/.libs/blkid $(1)/usr/sbin/
@@ -614,6 +630,7 @@ $(eval $(call BuildPackage,libmount))
 $(eval $(call BuildPackage,libsmartcols))
 $(eval $(call BuildPackage,libuuid))
 $(eval $(call BuildPackage,agetty))
+$(eval $(call BuildPackage,blkdiscard))
 $(eval $(call BuildPackage,blkid))
 $(eval $(call BuildPackage,cal))
 $(eval $(call BuildPackage,cfdisk))

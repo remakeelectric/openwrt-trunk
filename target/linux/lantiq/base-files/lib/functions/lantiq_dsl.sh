@@ -12,8 +12,10 @@ fi
 #
 dsl_cmd() {
 	killall -0 ${XDSL_CTRL} && (
+		lock /var/lock/dsl_pipe
 		echo "$@" > /tmp/pipe/dsl_cpe0_cmd
 		cat /tmp/pipe/dsl_cpe0_ack
+		lock -u /var/lock/dsl_pipe
 	)
 }
 dsl_val() {
@@ -60,6 +62,70 @@ scale_latency() {
 	a=$(expr $val / 100)
 	b=$(expr $val % 100)
 	printf "%d.%d ms" ${a} ${b}
+}
+
+#
+# convert vendorid into human readable form
+#
+parse_vendorid() {
+	local val=$1
+	local name
+	local version
+
+	case "$val" in
+		B5,00,41,4C,43,42*)
+			name="Alcatel"
+			version=${val##*B5,00,41,4C,43,42,}
+			;;
+		B5,00,41,4E,44,56*)
+			name="Analog Devices"
+			version=${val##*B5,00,41,4E,44,56,}
+			;;
+		B5,00,42,44,43,4D*)
+			name="Broadcom"
+			version=${val##*B5,00,42,44,43,4D,}
+			;;
+		B5,00,43,45,4E,54*)
+			name="Centillium"
+			version=${val##*B5,00,43,45,4E,54,}
+			;;
+		B5,00,47,53,50,4E*)
+			name="Globespan"
+			version=${val##*B5,00,47,53,50,4E,}
+			;;
+		B5,00,49,4B,4E,53*)
+			name="Ikanos"
+			version=${val##*B5,00,49,4B,4E,53,}
+			;;
+		B5,00,49,46,54,4E*)
+			name="Infineon"
+			version=${val##*B5,00,49,46,54,4E,}
+			;;
+		B5,00,54,53,54,43*)
+			name="Texas Instruments"
+			version=${val##*B5,00,54,53,54,43,}
+			;;
+		B5,00,54,4D,4D,42*)
+			name="Thomson MultiMedia Broadband"
+			version=${val##*B5,00,54,4D,4D,42,}
+			;;
+		B5,00,54,43,54,4E*)
+			name="Trend Chip Technologies"
+			version=${val##*B5,00,54,43,54,4E,}
+			;;
+		B5,00,53,54,4D,49*)
+			name="ST Micro"
+			version=${val##*B5,00,53,54,4D,49,}
+			;;
+	esac
+
+	[ -n "$name" ] && {
+		val="$name"
+
+		[ "$version" != "00,00" ] && val="$(printf "%s %d.%d" "$val" 0x${version//,/ 0x})"
+	}
+
+	echo "$val"
 }
 
 #
@@ -131,6 +197,9 @@ vendor() {
 	vid=$(dsl_string "$lig" G994VendorID)
 	svid=$(dsl_string "$lig" SystemVendorID)
 
+	vid=$(parse_vendorid $vid)
+	svid=$(parse_vendorid $svid)
+
 	if [ "$action" = "lucistat" ]; then
 		echo "dsl.atuc_vendor_id=\"${vid}\""
 		echo "dsl.atuc_system_vendor_id=\"${svid}\""
@@ -158,6 +227,9 @@ xtse() {
 
 	local annex_s=""
 	local line_mode_s=""
+	local vector_s=""
+
+	local dsmsg=""
 	local cmd=""
 
 	xtusesg=$(dsl_cmd g997xtusesg)
@@ -254,7 +326,15 @@ xtse() {
 	fi
 
 	if [ $((xtse8 & 7)) != 0  ]; then
-		line_mode_s="$line_mode_s G.993.2 (VDSL2),"
+		dsmsg=$(dsl_cmd dsmsg)
+		vector_s=$(dsl_val "$dsmsg" eVectorStatus)
+
+		case "$vector_s" in
+			"0")	line_mode_s="$line_mode_s G.993.2 (VDSL2)," ;;
+			"1")	line_mode_s="$line_mode_s G.993.5 (VDSL2 with downstream vectoring)," ;;
+			"2")	line_mode_s="$line_mode_s G.993.5 (VDSL2 with down- and upstream vectoring)," ;;
+			*)	line_mode_s="$line_mode_s unknown," ;;
+		esac
 	fi
 
 	#!!! PROPRIETARY & INTERMEDIATE USE !!!
@@ -268,14 +348,14 @@ xtse() {
 	xtse_s="${xtse1}, ${xtse2}, ${xtse3}, ${xtse4}, ${xtse5}, ${xtse6}, ${xtse7}, ${xtse8}"
 
 	if [ "$action" = "lucistat" ]; then
-		echo "dsl.xtse1=$xtse1"
-		echo "dsl.xtse2=$xtse2"
-		echo "dsl.xtse3=$xtse3"
-		echo "dsl.xtse4=$xtse4"
-		echo "dsl.xtse5=$xtse5"
-		echo "dsl.xtse6=$xtse6"
-		echo "dsl.xtse7=$xtse7"
-		echo "dsl.xtse8=$xtse8"
+		echo "dsl.xtse1=${xtse1:-nil}"
+		echo "dsl.xtse2=${xtse2:-nil}"
+		echo "dsl.xtse3=${xtse3:-nil}"
+		echo "dsl.xtse4=${xtse4:-nil}"
+		echo "dsl.xtse5=${xtse5:-nil}"
+		echo "dsl.xtse6=${xtse6:-nil}"
+		echo "dsl.xtse7=${xtse7:-nil}"
+		echo "dsl.xtse8=${xtse8:-nil}"
 		echo "dsl.xtse_s=\"$xtse_s\""
 		echo "dsl.annex_s=\"${annex_s}\""
 		echo "dsl.line_mode_s=\"${line_mode_s}\""
@@ -304,7 +384,7 @@ power_mode() {
 	esac
 
 	if [ "$action" = "lucistat" ]; then
-		echo "dsl.power_mode_num=$pm"
+		echo "dsl.power_mode_num=${pm:-nil}"
 		echo "dsl.power_mode_s=\"$s\""
 	else
 		echo "Power Management Mode:                    $s"
@@ -334,13 +414,13 @@ latency_delay() {
 	[ -z "$idd" ] && idd=0
 	[ -z "$idu" ] && idu=0
 
-	if [ "$idd" > 100 ]; then
+	if [ "$idd" -gt 100 ]; then
 		idd_s="Interleave"
 	else
 		idd_s="Fast"
 	fi
 
-	if [ "$idu" > 100 ]; then
+	if [ "$idu" -gt 100 ]; then
 		idu_s="Interleave"
 	else
 		idu_s="Fast"
@@ -414,22 +494,22 @@ errors() {
 	fecn=$(dsl_val "$ccsg" nFEC)
 
 	if [ "$action" = "lucistat" ]; then
-		echo "dsl.errors_fec_near=$fecn"
-		echo "dsl.errors_fec_far=$fecf"
-		echo "dsl.errors_es_near=$esn"
-		echo "dsl.errors_es_far=$esf"
-		echo "dsl.errors_ses_near=$sesn"
-		echo "dsl.errors_ses_far=$sesf"
-		echo "dsl.errors_loss_near=$lossn"
-		echo "dsl.errors_loss_far=$lossf"
-		echo "dsl.errors_uas_near=$uasn"
-		echo "dsl.errors_uas_far=$uasf"
-		echo "dsl.errors_hec_near=$hecn"
-		echo "dsl.errors_hec_far=$hecf"
-		echo "dsl.errors_crc_p_near=$crc_pn"
-		echo "dsl.errors_crc_p_far=$crc_pf"
-		echo "dsl.errors_crcp_p_near=$crcp_pn"
-		echo "dsl.errors_crcp_p_far=$crcp_pf"
+		echo "dsl.errors_fec_near=${fecn:-nil}"
+		echo "dsl.errors_fec_far=${fecf:-nil}"
+		echo "dsl.errors_es_near=${esn:-nil}"
+		echo "dsl.errors_es_far=${esf:-nil}"
+		echo "dsl.errors_ses_near=${sesn:-nil}"
+		echo "dsl.errors_ses_far=${sesf:-nil}"
+		echo "dsl.errors_loss_near=${lossn:-nil}"
+		echo "dsl.errors_loss_far=${lossf:-nil}"
+		echo "dsl.errors_uas_near=${uasn:-nil}"
+		echo "dsl.errors_uas_far=${uasf:-nil}"
+		echo "dsl.errors_hec_near=${hecn:-nil}"
+		echo "dsl.errors_hec_far=${hecf:-nil}"
+		echo "dsl.errors_crc_p_near=${crc_pn:-nil}"
+		echo "dsl.errors_crc_p_far=${crc_pf:-nil}"
+		echo "dsl.errors_crcp_p_near=${crcp_pn:-nil}"
+		echo "dsl.errors_crcp_p_far=${crcp_pf:-nil}"
 	else
 		echo "Forward Error Correction Seconds (FECS):  Near: ${fecn} / Far: ${fecf}"
 		echo "Errored seconds (ES):                     Near: ${esn} / Far: ${esf}"
@@ -437,7 +517,7 @@ errors() {
 		echo "Loss of Signal Seconds (LOSS):            Near: ${lossn} / Far: ${lossf}"
 		echo "Unavailable Seconds (UAS):                Near: ${uasn} / Far: ${uasf}"
 		echo "Header Error Code Errors (HEC):           Near: ${hecn} / Far: ${hecf}"
-		echo "Non Pre-emtive CRC errors (CRC_P):        Near: ${crcp_pn} / Far: ${crcp_pf}"
+		echo "Non Pre-emtive CRC errors (CRC_P):        Near: ${crc_pn} / Far: ${crc_pf}"
 		echo "Pre-emtive CRC errors (CRCP_P):           Near: ${crcp_pn} / Far: ${crcp_pf}"
 	fi
 }
@@ -524,6 +604,8 @@ line_data() {
 	[ -z "$satnu" ] && satnu=0
 	[ -z "$snrd" ] && snrd=0
 	[ -z "$snru" ] && snru=0
+	[ -z "$actatpd" ] && actatpd=0
+	[ -z "$actatpu" ] && actatpu=0
 
 	latnd=$(dbt $latnd)
 	latnu=$(dbt $latnu)
@@ -616,10 +698,41 @@ line_state() {
 	fi
 }
 
+#
+# Which profile is used?
+#
+profile() {
+	local bpstg=$(dsl_cmd bpstg)
+	local profile=$(dsl_val "$bpstg" nProfile);
+	local s;
+
+	case "$profile" in
+		"0")	s="8a" ;;
+		"1")	s="8b" ;;
+		"2")	s="8c" ;;
+		"3")	s="8d" ;;
+		"4")	s="12a" ;;
+		"5")	s="12b" ;;
+		"6")	s="17a" ;;
+		"7")	s="30a" ;;
+		"8")	s="17b" ;;
+		"")		s="";;
+		*)		s="unknown" ;;
+	esac
+
+	if [ "$action" = "lucistat" ]; then
+		echo "dsl.profile=${profile:-nil}"
+		echo "dsl.profile_s=\"${s}\""
+	else
+		echo "Profile:                                  $s"
+	fi
+}
+
 status() {
 	vendor
 	chipset
 	xtse
+	profile
 	line_state
 	errors
 	power_mode
